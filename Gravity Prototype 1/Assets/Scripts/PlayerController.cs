@@ -1,18 +1,23 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Windows;
 
 public class PlayerController : MonoBehaviour
 {
+    private Rigidbody rb;
+
     //Movement
     [SerializeField] private float speed = 5f;
-    InputAction moveAction;
+    //[SerializeField] private float snapStrength = 5f;
+    public InputActionReference moveAction;
     InputAction jumpAction;
 
+    
     //gravity
-    InputAction gravityAction;
+    //InputAction gravityAction;
     //InputAction directionAction;
-    private enum gravityDirection { Up, Right, Down, Left };
-    [SerializeField] private gravityDirection direction;
+    public enum gravityDirection { Up, Right, Down, Left };
+    public gravityDirection direction;
     private gravityDirection previousDir;
     [SerializeField] private Vector3 upGravity = new Vector3(0, -1f, 0);
     [SerializeField] private Vector3 rightGravity = new Vector3(1f, 0, 0);
@@ -20,77 +25,82 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Vector3 leftGravity = new Vector3(-1f, 0, 0);
 
     //mode
-    private enum gameMode {Free, Switch, Both};
-    [SerializeField] private gameMode mode;
+    //private enum gameMode {Free, Switch, Both};
+    //[SerializeField] private gameMode mode;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         //Set default game mode and gravity
-        mode = gameMode.Free;
-        direction = gravityDirection.Down;
-        previousDir = gravityDirection.Down;
+        //mode = gameMode.Free;
+        //direction = gravityDirection.Down;
+        //previousDir = gravityDirection.Down;
 
         //Set input actions
-        moveAction = InputSystem.actions.FindAction("Move");
+        //moveAction = InputSystem.actions.FindAction("Move");
         jumpAction = InputSystem.actions.FindAction("Jump");
-        gravityAction = InputSystem.actions.FindAction("Gravity Switch");
+        //gravityAction = InputSystem.actions.FindAction("Gravity Switch");
         //directionAction = InputSystem.actions.FindAction("Gravity Direction");
+    }
+
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
     }
 
     // Update is called once per frame
     void Update()
     {
+        
+    }
+
+    //Might need reworked
+    private void FixedUpdate()
+    {
         //Move
-        if (!gravityAction.IsPressed()) //Not good enough
+        //if (!gravityAction.IsPressed()) //Not good enough
+        //{
+        //Vector2 movement = moveAction.ReadValue<Vector2>();
+        //transform.Translate(new Vector3(movement.x, 0f, 0f) * speed * Time.deltaTime);
+
+        //Vector3 m_Input = new Vector3(moveAction.action.ReadValue<Vector2>().x, 0, 0);
+        //rb.MovePosition(transform.position + m_Input * Time.fixedDeltaTime * speed);
+
+        //rb.AddForce(m_Input * speed, ForceMode.VelocityChange);
+
+        Vector3 currentVelocity = new Vector3(); 
+        Vector3 targetVelocity = new Vector3();
+        Vector3 gravDir = Vector3.down;
+
+        if (direction == gravityDirection.Up)
         {
-            Vector2 movement = moveAction.ReadValue<Vector2>();
-            transform.Translate(new Vector3(movement.x, 0f, 0f) * speed * Time.deltaTime);
+            currentVelocity = Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.up);
+            //rb.linearVelocity = new Vector3(moveAction.action.ReadValue<Vector2>().x * speed, rb.linearVelocity.y, 0);
+            targetVelocity = new Vector3(moveAction.action.ReadValue<Vector2>().x * speed, rb.linearVelocity.y, 0);
+            gravDir = Vector3.up;
+            //rb.AddForce((new Vector3(moveAction.action.ReadValue<Vector2>().x * speed, 0, 0) - currentVelocity) * snapStrength, ForceMode.VelocityChange);
+        }
+        else if (direction == gravityDirection.Down)
+        {
+            currentVelocity = Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.down);
+            targetVelocity = new Vector3(moveAction.action.ReadValue<Vector2>().x * speed, rb.linearVelocity.y, 0);
+            gravDir = Vector3.down;
+        }
+        else if (direction == gravityDirection.Right)
+        {
+            currentVelocity = Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.right);
+            targetVelocity = new Vector3(rb.linearVelocity.x, moveAction.action.ReadValue<Vector2>().y * speed, 0);
+            gravDir = Vector3.right;
+        }
+        else
+        {
+            currentVelocity = Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.left);
+            targetVelocity = new Vector3(rb.linearVelocity.x, moveAction.action.ReadValue<Vector2>().y * speed, 0);
+            gravDir = Vector3.left;
+            //rb.linearVelocity = new Vector3(rb.linearVelocity.x, moveAction.action.ReadValue<Vector2>().y * speed,  0);
+            //rb.AddForce((new Vector3(0, moveAction.action.ReadValue<Vector2>().y * speed, 0) - currentVelocity) * snapStrength, ForceMode.VelocityChange);
         }
 
-        //Switch gravity in free mode
-        if (mode == gameMode.Free || mode == gameMode.Both)
-        {
-            if (gravityAction.WasPerformedThisFrame())
-            {
-                string dir = gravityAction.activeControl.name;
-
-                switch (dir) {
-                    case "w": case "upArrow":
-                        direction = gravityDirection.Up;
-                        break;
-                    case "d": case "rightArrow":
-                        direction = gravityDirection.Right;
-                        break;
-                    case "s": case "downArrow":
-                        direction = gravityDirection.Down;
-                        break;
-                    case "a": case "leftArrow":
-                        direction = gravityDirection.Left;
-                        break;
-                }
-                Debug.Log("Gravity Direction: " + direction);
-            }
-        }
-
-        //Check Gravity Direction
-        if (direction != previousDir)
-        {
-            switch (direction) {
-                case gravityDirection.Up:
-                    Physics.gravity = upGravity;
-                    break;
-                case gravityDirection.Right:
-                    Physics.gravity = rightGravity;
-                    break;
-                case gravityDirection.Down:
-                    Physics.gravity = downGravity; 
-                    break;
-                case gravityDirection.Left:
-                    Physics.gravity = leftGravity;
-                    break;
-            }
-            previousDir = direction;
-        }
+        rb.AddForce(Vector3.ProjectOnPlane(targetVelocity - currentVelocity, gravDir));
     }
 }
