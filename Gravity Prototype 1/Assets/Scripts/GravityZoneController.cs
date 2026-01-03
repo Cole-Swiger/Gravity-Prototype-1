@@ -74,13 +74,7 @@ public class GravityZoneController : MonoBehaviour
     {
         //Only affect movable objects
         if (other.attachedRigidbody && other.tag == "Movable")
-        {
-            //Set direction on player to adjust controls for gravity direction.
-            if (other.name == "Player")
-            {
-                other.GetComponent<PlayerController>().direction = (PlayerController.gravityDirection)direction;
-            }
-            
+        {   
             switch (direction)
             {
                 case gravityDirection.Up:
@@ -97,7 +91,17 @@ public class GravityZoneController : MonoBehaviour
                     break;
             }
 
+            //Set direction on player to adjust controls for gravity direction.
+            if (other.name == "Player")
+            {
+                PlayerController pc = other.GetComponent<PlayerController>();
+                pc.direction = (PlayerController.gravityDirection) direction;
+                pc.gravityDirectionVector = forceDirection.normalized;
+            }
+
             other.attachedRigidbody.AddForce(forceDirection, ForceMode.Acceleration);
         }
     }
+
+    //TODO: Figure out why there is occasionally a null pointer exception when checking for active control (input) on line 47
 }
