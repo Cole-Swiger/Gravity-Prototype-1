@@ -20,13 +20,28 @@ public class GravityZoneController : MonoBehaviour
     private enum gameMode { Free, Switch, Both };
     [SerializeField] private gameMode mode;
 
+    private void Awake()
+    {
+        //Called before OnEnable
+        gravityAction = InputSystem.actions.FindAction("Gravity Switch");
+    }
+
+    private void OnEnable()
+    {
+        gravityAction.performed += OnGravityActionPerformed;
+    }
+
+    private void OnDisable()
+    {
+        gravityAction.performed -= OnGravityActionPerformed;
+    }
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         direction = gravityDirection.Down;
         //previousDir = gravityDirection.Down;
         forceDirection = transform.up;
-        gravityAction = InputSystem.actions.FindAction("Gravity Switch");
 
         upGravity = new Vector3(0, gravityForce * -1, 0);
         rightGravity = new Vector3(gravityForce * -1, 0, 0);
@@ -39,35 +54,7 @@ public class GravityZoneController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //Switch gravity in free mode
-        if (mode == gameMode.Free || mode == gameMode.Both)
-        {
-            if (gravityAction.WasPerformedThisFrame())
-            {
-                string dir = gravityAction.activeControl.name;
-
-                switch (dir)
-                {
-                    case "w":
-                    case "upArrow":
-                        direction = gravityDirection.Up;
-                        break;
-                    case "d":
-                    case "rightArrow":
-                        direction = gravityDirection.Right;
-                        break;
-                    case "s":
-                    case "downArrow":
-                        direction = gravityDirection.Down;
-                        break;
-                    case "a":
-                    case "leftArrow":
-                        direction = gravityDirection.Left;
-                        break;
-                }
-                Debug.Log("Gravity Direction: " + direction);
-            }
-        }
+     
     }
 
     private void OnTriggerStay(Collider other)
@@ -99,9 +86,39 @@ public class GravityZoneController : MonoBehaviour
                 pc.gravityDirectionVector = forceDirection.normalized;
             }
 
+            //Apply gravity force
             other.attachedRigidbody.AddForce(forceDirection, ForceMode.Acceleration);
         }
     }
 
-    //TODO: Figure out why there is occasionally a null pointer exception when checking for active control (input) on line 47
+    private void OnGravityActionPerformed(InputAction.CallbackContext context)
+    {
+        if (mode == gameMode.Free || mode == gameMode.Both)
+        {
+            /*Debug.Log("Action performed: " + context);
+            Debug.Log("Active Control: " + context.control);
+            Debug.Log("Active Control Name: " + context.control.name);*/
+            string dir = context.control.name;
+
+            switch (dir)
+            {
+                case "w":
+                case "upArrow":
+                    direction = gravityDirection.Up;
+                    break;
+                case "d":
+                case "rightArrow":
+                    direction = gravityDirection.Right;
+                    break;
+                case "s":
+                case "downArrow":
+                    direction = gravityDirection.Down;
+                    break;
+                case "a":
+                case "leftArrow":
+                    direction = gravityDirection.Left;
+                    break;
+            }
+        }
+    }
 }
