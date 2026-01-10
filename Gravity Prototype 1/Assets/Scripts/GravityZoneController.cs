@@ -82,8 +82,15 @@ public class GravityZoneController : MonoBehaviour
             if (other.name == "Player")
             {
                 PlayerController pc = other.GetComponent<PlayerController>();
-                pc.direction = (PlayerController.gravityDirection) direction;
-                pc.gravityDirectionVector = forceDirection.normalized;
+                //Change gravity direction and cancel jumping if gravity direction is different
+                if (pc.direction != (PlayerController.gravityDirection) direction)
+                {
+                    pc.direction = (PlayerController.gravityDirection)direction;
+                    pc.gravityDirectionVector = forceDirection.normalized;
+                    //Use gravity momentum and physics instead of jumping
+                    pc.isJumping = false;
+                    pc.useGravityMomentum = true;
+                }       
             }
 
             //Apply gravity force

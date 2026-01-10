@@ -6,7 +6,7 @@ using UnityEngine.Windows;
 public class PlayerController : MonoBehaviour
 {
     //Physics - Note: Timestep set to 0.01 from 0.02 in Project settings to reduce clipping
-    private Rigidbody rb;
+    [SerializeField] private Rigidbody rb;
 
     //Grounded checks
     [SerializeField] private bool isGrounded = false;
@@ -19,13 +19,26 @@ public class PlayerController : MonoBehaviour
     //Movement
     [SerializeField] private float groundSpeed = 3.5f;
     [SerializeField] private float maxGroundSpeed = 3.5f;
-    [SerializeField] private float airSpeed = 5f;
+    [SerializeField] private float airForce = 5f;
+    [SerializeField] private float maxAirSpeed = 5f;
+    [SerializeField] private float correction = 20f;
     private Vector3 landingMomentum;
     //private Vector3 maxLandingMomentum;
     //[SerializeField] private float snapStrength = 5f;
     public InputActionReference moveAction;
     //Test movement feel in air with toggle
     [SerializeField] private bool allowAirMovement = true;
+    [SerializeField] private AnimationCurve airSpeedSnap;
+    private bool _useGravityMomentum = false;
+    public bool useGravityMomentum
+    {
+        get { return _useGravityMomentum; }
+        set
+        {
+            _useGravityMomentum = value;
+            rb.linearDamping = _useGravityMomentum ? 2f : 0;
+        }
+    }
 
     //Jump
     InputAction jumpAction;
@@ -35,7 +48,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float landingBufferTime = 1f;
     //Set this to buffer timer on landing to reduce speed
     private float landingTimer = 1f;
-    //public bool isJumping = false;
+    public bool isJumping = false;
 
     //gravity
     //InputAction gravityAction;
@@ -141,7 +154,8 @@ public class PlayerController : MonoBehaviour
                 case gravityDirection.Left:
                     rb.linearVelocity = new Vector3(jumpForce, rb.linearVelocity.y, 0f);
                     break;
-            }   
+            }
+            isJumping = true;
         }
     }
 
@@ -219,26 +233,135 @@ public class PlayerController : MonoBehaviour
         }         
     }
 
-    //Consider making this velocity based, like with ground movement, but lower speed. Or add a toggle to use both
+    //
+    //TODO: Refactor to reduce duplicate code
+    //
+
     //Player movement in air dependant on gravity direction. Floatier than ground movement, preservs momentum
+    //User input applies force, then minor corrections are done to handle changing gravity directions and max speeds
     private void MoveInAir()
     {
         Vector3 currentVelocity = Vector3.ProjectOnPlane(rb.linearVelocity, gravityDirectionVector);
         Vector3 targetVelocity = new Vector3();
 
+        //Up and Down gravity calculations
         if (direction == gravityDirection.Up || direction == gravityDirection.Down)
         {
             //Ignore up and down inputs from the player, but still keep momentum that slowly fades with drag.
-            targetVelocity = new Vector3(moveAction.action.ReadValue<Vector2>().x * airSpeed, rb.linearVelocity.y, 0);
+            float inputSpeed = moveAction.action.ReadValue<Vector2>().x * airForce;
+
+            //If magnitude of current x velocity is greater than max air speed, set the target speed to the max air speed for the x axis
+            //Use user input if it is opposite direction of current velocity
+            if (Mathf.Abs(rb.linearVelocity.x) > maxAirSpeed)
+            {
+                if (rb.linearVelocity.x >= 0 && inputSpeed > 0)
+                {
+                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(maxAirSpeed, rb.linearVelocity.y, 0), gravityDirectionVector);
+                }
+                else if (rb.linearVelocity.x < 0 && inputSpeed < 0)
+                {
+                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(-maxAirSpeed, rb.linearVelocity.y, 0), gravityDirectionVector);
+                }
+                //Speed and input are opposite directions
+                else 
+                {
+                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(inputSpeed, rb.linearVelocity.y, 0), gravityDirectionVector);
+                }
+            }
+            //max speed not met yet
+            else
+            {
+                targetVelocity = Vector3.ProjectOnPlane(new Vector3(inputSpeed, rb.linearVelocity.y, 0), gravityDirectionVector);
+            }
+            //Add force using difference between current and target velocites
+            rb.AddForce(Vector3.ProjectOnPlane(targetVelocity - currentVelocity, gravityDirectionVector));
+            
+            //Correct minor momentum issues and enforce horizontal max air speed while jumping or falling without gravity change
+            float currentX = rb.linearVelocity.x;
+            float currentY = rb.linearVelocity.y;
+            //Jumps and regular falling should not be affected by input force
+            if (Mathf.Abs(currentX) > maxAirSpeed && (isJumping || !_useGravityMomentum))
+            {
+                //Set velocity directly
+                rb.linearVelocity = currentX < 0 ? new Vector3(-maxAirSpeed, currentY, 0) : new Vector3(maxAirSpeed, currentY, 0);
+            }
+
+            float correctedX = currentX;
+            float correctedY = currentY;
+            //if x or y velocities are still higher than the max speed, Lerp them to proper speed
+            //This does not apply to speed in direction of gravity
+            if (_useGravityMomentum && Mathf.Abs(currentX) > maxAirSpeed)
+            {
+                correctedX = currentX < 0 ? -maxAirSpeed : maxAirSpeed;
+            }
+            else if (_useGravityMomentum && currentY < -maxAirSpeed && direction == gravityDirection.Up)
+            {
+                correctedY = -maxAirSpeed;
+            }
+            else if (_useGravityMomentum && currentY > maxAirSpeed && direction == gravityDirection.Down)
+            {
+                correctedY = maxAirSpeed;
+            }
+            rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, new Vector3(correctedX, correctedY, 0), correction * Time.fixedDeltaTime);
         }
+        //Left and Right gravity calculations
         else
         {
             //Ignore left and right inputs from the player, but still keep momentum that slowly fades with drag.
-            targetVelocity = new Vector3(rb.linearVelocity.x, moveAction.action.ReadValue<Vector2>().y * airSpeed, 0);
-        }
+            float inputSpeed = moveAction.action.ReadValue<Vector2>().y * airForce;
 
-        //Add force of input relative to direction of gravity
-        rb.AddForce(Vector3.ProjectOnPlane(targetVelocity - currentVelocity, gravityDirectionVector));
+            //If magnitude of current y velocity is greater than max air speed, set the target speed to the max air speed for the y axis
+            //Use user input if it is opposite direction of current velocity
+            if (Mathf.Abs(rb.linearVelocity.y) > maxAirSpeed)
+            {
+                if (rb.linearVelocity.y >= 0 && inputSpeed > 0)
+                {
+                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(rb.linearVelocity.x, maxAirSpeed, 0), gravityDirectionVector);
+                }
+                else if (rb.linearVelocity.y < 0 && inputSpeed < 0)
+                {
+                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(rb.linearVelocity.x, -maxAirSpeed, 0), gravityDirectionVector);
+                }
+                else
+                {
+                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(rb.linearVelocity.x, inputSpeed, 0), gravityDirectionVector);
+                }
+            }
+            //Speed and input are opposite directions
+            else
+            {
+                targetVelocity = Vector3.ProjectOnPlane(new Vector3(rb.linearVelocity.x, inputSpeed, 0), gravityDirectionVector);
+            }
+            //Add force using difference between current and target velocites
+            rb.AddForce(Vector3.ProjectOnPlane(targetVelocity - currentVelocity, gravityDirectionVector));
+
+            //Correct minor momentum issues and enforce horizontal max air speed while jumping or falling without gravity change
+            float currentX = rb.linearVelocity.x;
+            float currentY = rb.linearVelocity.y;
+            //Jumps and regular falling should not be affected by input force
+            if (Mathf.Abs(rb.linearVelocity.y) > maxAirSpeed && (isJumping || !_useGravityMomentum))
+            {
+                rb.linearVelocity = currentY < 0 ? new Vector3(currentX, -maxAirSpeed, 0) : new Vector3(currentX, maxAirSpeed, 0);
+            }
+
+            float correctedX = currentX;
+            float correctedY = currentY;
+            //if x or y velocities are still higher than the max speed, Lerp them to proper speed
+            //This does not apply to speed in direction of gravity
+            if (_useGravityMomentum && Mathf.Abs(currentY) > maxAirSpeed)
+            {
+                correctedY = currentY < 0 ? -maxAirSpeed : maxAirSpeed;
+            }
+            else if (_useGravityMomentum && currentX < -maxAirSpeed && direction == gravityDirection.Right)
+            {
+                correctedX = -maxAirSpeed;
+            }
+            else if (_useGravityMomentum && currentX > maxAirSpeed && direction == gravityDirection.Left)
+            {
+                correctedX = maxAirSpeed;
+            }
+            rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, new Vector3(correctedX, correctedY, 0), correction * Time.fixedDeltaTime);
+        }
     }
 
     //Check if any objects player is touching is ground
@@ -289,6 +412,7 @@ public class PlayerController : MonoBehaviour
         wasGrounded = isGrounded;
         isGrounded = groundedObjects.Count > 0;
         justLanded = !wasGrounded && isGrounded; //true when going from air to ground
+        //isJumping = isGrounded ? false : isJumping; //Ensure false while grounded
     }
 
     //Reduce momentum overtime regardless of player input
@@ -301,6 +425,8 @@ public class PlayerController : MonoBehaviour
             landingMomentum = Vector3.ProjectOnPlane(rb.linearVelocity, gravityDirectionVector);
             //Used to reduce speed on impact if buffer is less than 1
             landingTimer = landingBufferTime;
+            isJumping = false;
+            useGravityMomentum = false;
         }
 
         //Snap momentum to 0 when close enough
