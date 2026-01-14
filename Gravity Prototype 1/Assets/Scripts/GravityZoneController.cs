@@ -7,10 +7,10 @@ public class GravityZoneController : MonoBehaviour
     InputAction gravityAction;
     [SerializeField] private float gravityForce = -29.43f;
     //InputAction directionAction;
-    private enum gravityDirection { Up, Right, Down, Left };
-    [SerializeField] private gravityDirection direction;
+    private enum GravityDirection { Up, Right, Down, Left };
+    [SerializeField] private GravityDirection direction;
     private Vector3 forceDirection;
-    //private gravityDirection previousDir;
+    //private GravityDirection previousDir;
     [SerializeField] private Vector3 upGravity;
     [SerializeField] private Vector3 rightGravity;
     [SerializeField] private Vector3 downGravity;
@@ -39,8 +39,8 @@ public class GravityZoneController : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        direction = gravityDirection.Down;
-        //previousDir = gravityDirection.Down;
+        direction = GravityDirection.Down;
+        //previousDir = GravityDirection.Down;
         forceDirection = transform.up;
 
         upGravity = new Vector3(0, gravityForce * -1, 0);
@@ -64,16 +64,16 @@ public class GravityZoneController : MonoBehaviour
         {   
             switch (direction)
             {
-                case gravityDirection.Up:
+                case GravityDirection.Up:
                     forceDirection = upGravity;
                     break;
-                case gravityDirection.Right:
+                case GravityDirection.Right:
                     forceDirection = rightGravity;
                     break;
-                case gravityDirection.Down:
+                case GravityDirection.Down:
                     forceDirection = downGravity;
                     break;
-                case gravityDirection.Left:
+                case GravityDirection.Left:
                     forceDirection = leftGravity;
                     break;
             }
@@ -83,9 +83,9 @@ public class GravityZoneController : MonoBehaviour
             {
                 PlayerController pc = other.GetComponent<PlayerController>();
                 //Change gravity direction and cancel jumping if gravity direction is different
-                if (pc.direction != (PlayerController.gravityDirection) direction)
+                if (pc.direction != (PlayerController.GravityDirection) direction)
                 {
-                    pc.direction = (PlayerController.gravityDirection)direction;
+                    pc.direction = (PlayerController.GravityDirection)direction;
                     pc.gravityDirectionVector = forceDirection.normalized;
                     //Use gravity momentum and physics instead of jumping
                     pc.isJumping = false;
@@ -111,19 +111,19 @@ public class GravityZoneController : MonoBehaviour
             {
                 case "w":
                 case "upArrow":
-                    direction = gravityDirection.Up;
+                    direction = GravityDirection.Up;
                     break;
                 case "d":
                 case "rightArrow":
-                    direction = gravityDirection.Right;
+                    direction = GravityDirection.Right;
                     break;
                 case "s":
                 case "downArrow":
-                    direction = gravityDirection.Down;
+                    direction = GravityDirection.Down;
                     break;
                 case "a":
                 case "leftArrow":
-                    direction = gravityDirection.Left;
+                    direction = GravityDirection.Left;
                     break;
             }
         }

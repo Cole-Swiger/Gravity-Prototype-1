@@ -13,13 +13,16 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private bool wasGrounded = false;
     [SerializeField] private bool justLanded = false;
     [SerializeField] private float landingDamping = 25f;
-    //Objects this object is touching that is considered ground
+    //Objects this object is touching that are considered ground
     private HashSet<GameObject> groundedObjects;
 
     //Movement
     [SerializeField] private float groundSpeed = 3.5f;
     [SerializeField] private float maxGroundSpeed = 3.5f;
+    //Force applied from input while jumping an falling
     [SerializeField] private float airForce = 5f;
+    //Force applied from input during gravity direction change in air
+    [SerializeField] private float gravityAirForce = 2f;
     [SerializeField] private float maxAirSpeed = 5f;
     [SerializeField] private float correction = 20f;
     private Vector3 landingMomentum;
@@ -53,17 +56,31 @@ public class PlayerController : MonoBehaviour
     //gravity
     //InputAction gravityAction;
     //InputAction directionAction;
-    public enum gravityDirection { Up, Right, Down, Left };
-    public gravityDirection direction;
+    public enum GravityDirection { Up, Right, Down, Left };
+    private GravityDirection _direction;
+    public GravityDirection direction
+    {
+        get { return _direction; }
+        set
+        {
+            _direction = value;
+            bool verticalDirection = _direction == GravityDirection.Up || _direction == GravityDirection.Down;
+            movementAxis = verticalDirection ? Axis.X : Axis.Y;
+            gravityAxis = verticalDirection ? Axis.Y : Axis.X;
+        }
+    }
     //Set by gravity zone, default to down
     public Vector3 gravityDirectionVector = Vector3.down;
-    /*private gravityDirection previousDir;
+    /*private GravityDirection previousDir;
     [SerializeField] private Vector3 upGravity = new Vector3(0, -1f, 0);
     [SerializeField] private Vector3 rightGravity = new Vector3(1f, 0, 0);
     [SerializeField] private Vector3 downGravity = new Vector3(0, 1f, 0);
     [SerializeField] private Vector3 leftGravity = new Vector3(-1f, 0, 0);*/
     //Angle when floor becomes a wall
     [SerializeField] private float floorAngleLimit = .707f; //about 45 degrees
+    private enum Axis { X, Y };
+    private Axis movementAxis;
+    private Axis gravityAxis;
 
     //mode
     //private enum gameMode {Free, Switch, Both};
@@ -91,8 +108,8 @@ public class PlayerController : MonoBehaviour
     {
         //Set default game mode and gravity
         //mode = gameMode.Free;
-        //direction = gravityDirection.Down;
-        //previousDir = gravityDirection.Down;
+        //direction = GravityDirection.Down;
+        //previousDir = GravityDirection.Down;
 
         //Set input actions
         //moveAction = InputSystem.actions.FindAction("Move");
@@ -101,6 +118,8 @@ public class PlayerController : MonoBehaviour
         groundedObjects = new HashSet<GameObject>();
         //Defaul air momentum when landing is 0.
         landingMomentum = Vector3.zero;
+        movementAxis = Axis.X;
+        gravityAxis= Axis.Y;
         //maxLandingMomentum = Vector3.zero;
         //gravityAction = InputSystem.actions.FindAction("Gravity Switch");
         //directionAction = InputSystem.actions.FindAction("Gravity Direction");
@@ -122,7 +141,7 @@ public class PlayerController : MonoBehaviour
         //Movement calculated using player input, momentum, and grounded state
         if (isGrounded)
         {
-            MoveOnGround();
+            MoveOnGroundTwo();
         }
         //Only allow air input while toggle is true
         else if (allowAirMovement)
@@ -139,29 +158,16 @@ public class PlayerController : MonoBehaviour
         if (isGrounded)
         {
             //Direction determines which way to add velocity
+            float signedJumpForce = (_direction == GravityDirection.Up || _direction == GravityDirection.Right) ? -jumpForce : jumpForce;
             //Assign velocity directly to overcome higher gravity
-            switch (direction)
-            {
-                case gravityDirection.Up:
-                    rb.linearVelocity = new Vector3(rb.linearVelocity.x, -jumpForce, 0f);
-                    break;
-                case gravityDirection.Right:
-                    rb.linearVelocity = new Vector3(-jumpForce, rb.linearVelocity.y, 0f);
-                    break;
-                case gravityDirection.Down:
-                    rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, 0f);
-                    break;
-                case gravityDirection.Left:
-                    rb.linearVelocity = new Vector3(jumpForce, rb.linearVelocity.y, 0f);
-                    break;
-            }
+            rb.linearVelocity = SetVectorByAxis(rb.linearVelocity, gravityAxis, signedJumpForce);
             isJumping = true;
         }
     }
 
     //Ground movement is tight and precise
     //Momentum from air is present, but diminishes quickly over time and by player input
-    private void MoveOnGround()
+    private void MoveOnGroundTwo()
     {
         //Briefly reduce ground speed if landing timer is being used to simulate ground impact
         //Set landing timer and max landing timer to 1 to ignore effect entirely
@@ -178,190 +184,120 @@ public class PlayerController : MonoBehaviour
         }
 
         //Up and down gravitry allows only left and right movement from player input, and uses the x component of landing momentum. Up and down inputs are ignored
-        if (direction == gravityDirection.Up || direction == gravityDirection.Down)
-        {
-            //Velocity is calculated using player input, ground speed, and landing momentum, if present
-            //Only add momentum if going opposite direction of player input to avoid speed boost on landing
-            //if multiplication is positive, then momentum and input are in same direction. If no input, still apply momentum
-            float moveDirection = moveAction.action.ReadValue<Vector2>().x * landingMomentum.x;
-            //Input and momentum are in same direction
-            if (moveDirection > 0)
-            {
-                //Do not add momentum in same direction
-                rb.linearVelocity = new Vector3(moveAction.action.ReadValue<Vector2>().x * groundSpeed, rb.linearVelocity.y, 0);
-            }
-            //Input and momentum are in opposite directions
-            else
-            {
-                rb.linearVelocity = new Vector3((moveAction.action.ReadValue<Vector2>().x * groundSpeed) + landingMomentum.x, rb.linearVelocity.y, 0);
-
-                //Reduce momentum by amount of opposite (input * speed) to avoid rebounding affect when there is no input from the player
-                if (landingMomentum.x != 0)
-                {
-                    float newMomentum = landingMomentum.x + (moveAction.action.ReadValue<Vector2>().x * groundSpeed);
-                    //If momentum crosses 0, cancel it out, else set it to new momentum
-                    landingMomentum = (Mathf.Sign(newMomentum) != Mathf.Sign(landingMomentum.x)) ? Vector3.zero : new Vector3(newMomentum, 0, 0);
-                }
-            }
-        }
         //Left and right gravity allows only up and down movement from player input, and uses the y component of landing momentum. Left and right inputs are ignored
+        //Velocity is calculated using player input, ground speed, and landing momentum, if present
+        //Only add momentum if going opposite direction of player input to avoid speed boost on landing
+        //if multiplication is positive, then momentum and input are in same direction. If no input, still apply momentum
+        float moveDirection = GetAxisValue(moveAction.action.ReadValue<Vector2>(), movementAxis);
+        float momentumDirection = GetAxisValue(landingMomentum, movementAxis);
+        float moveDirectionWithMomentum = moveDirection * momentumDirection;
+        float inputSpeed = moveDirection * groundSpeed;
+        float inputSpeedWithMomentum = inputSpeed + momentumDirection;
+        //Input and momentum are in same direction
+        if (moveDirectionWithMomentum > 0)
+        {
+            //Do not add momentum in same direction
+            rb.linearVelocity = SetVectorByAxis(rb.linearVelocity, movementAxis, inputSpeed);
+        }
+        //Input and momentum are in opposite directions
         else
         {
-            //Velocity is calculated using player input, ground speed, and landing momentum, if present
-            //Only add momentum if going opposite direction of player input to avoid speed boost on landing
-            //if multiplication is positive, then momentum and input are in same direction. If no input, still apply momentum
-            float moveDirection = moveAction.action.ReadValue<Vector2>().y * landingMomentum.y;
-            //Input and momentum are in same direction
-            if (moveDirection > 0)
-            {
-                //Do not add momentum in same direction
-                rb.linearVelocity = new Vector3(rb.linearVelocity.x, moveAction.action.ReadValue<Vector2>().y * groundSpeed, 0);
-            }
-            //Input and momentum are in opposite directions
-            else
-            {
-                rb.linearVelocity = new Vector3(rb.linearVelocity.x, (moveAction.action.ReadValue<Vector2>().y * groundSpeed) + landingMomentum.y, 0);
+            rb.linearVelocity = SetVectorByAxis(rb.linearVelocity, movementAxis, inputSpeedWithMomentum);
 
-                //Reduce momentum by amount of opposite (input * speed) to avoid rebounding affect when there is no input from the player
-                if (landingMomentum.y != 0)
-                {
-                    float newMomentum = landingMomentum.y + (moveAction.action.ReadValue<Vector2>().y * groundSpeed);
-                    //If momentum crosses 0, cancel it out, else set it to new momentum
-                    landingMomentum = (Mathf.Sign(newMomentum) != Mathf.Sign(landingMomentum.y)) ? Vector3.zero : new Vector3(0, newMomentum, 0);
-                }
+            //Reduce momentum by amount of opposite (input * speed) to avoid rebounding affect when there is no input from the player
+            if (momentumDirection != 0)
+            {
+                //If momentum crosses 0, cancel it out, else set it to new momentum
+                bool areSpeedsDifferentSigns = Mathf.Sign(inputSpeedWithMomentum) != Mathf.Sign(momentumDirection);
+                landingMomentum = areSpeedsDifferentSigns ? Vector3.zero : SetVectorByAxis(landingMomentum, movementAxis, inputSpeedWithMomentum);
             }
-        }         
+        }
     }
-
-    //
-    //TODO: Refactor to reduce duplicate code
-    //
 
     //Player movement in air dependant on gravity direction. Floatier than ground movement, preservs momentum
     //User input applies force, then minor corrections are done to handle changing gravity directions and max speeds
     private void MoveInAir()
     {
-        Vector3 currentVelocity = Vector3.ProjectOnPlane(rb.linearVelocity, gravityDirectionVector);
-        Vector3 targetVelocity = new Vector3();
+        Vector3 currentVelocity = rb.linearVelocity;
+        Vector3 targetVelocity = currentVelocity;
+        //Allow less force from player during gravity change
+        float inputForce = _useGravityMomentum ? gravityAirForce : airForce;
+        //Depends on current movement axis
+        float inputSpeed = GetAxisValue(moveAction.action.ReadValue<Vector2>(), movementAxis) * inputForce;
+        float currentAxisVelocity = GetAxisValue(currentVelocity, movementAxis);
 
-        //Up and Down gravity calculations
-        if (direction == gravityDirection.Up || direction == gravityDirection.Down)
+        //Clamp movement speed to max air speed
+        if (Mathf.Abs(currentAxisVelocity) > maxAirSpeed)
         {
-            //Ignore up and down inputs from the player, but still keep momentum that slowly fades with drag.
-            float inputSpeed = moveAction.action.ReadValue<Vector2>().x * airForce;
-
-            //If magnitude of current x velocity is greater than max air speed, set the target speed to the max air speed for the x axis
-            //Use user input if it is opposite direction of current velocity
-            if (Mathf.Abs(rb.linearVelocity.x) > maxAirSpeed)
+            //Speed and input both positive
+            if (currentAxisVelocity >= 0 && inputSpeed > 0)
             {
-                if (rb.linearVelocity.x >= 0 && inputSpeed > 0)
-                {
-                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(maxAirSpeed, rb.linearVelocity.y, 0), gravityDirectionVector);
-                }
-                else if (rb.linearVelocity.x < 0 && inputSpeed < 0)
-                {
-                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(-maxAirSpeed, rb.linearVelocity.y, 0), gravityDirectionVector);
-                }
-                //Speed and input are opposite directions
-                else 
-                {
-                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(inputSpeed, rb.linearVelocity.y, 0), gravityDirectionVector);
-                }
+                targetVelocity = Vector3.ProjectOnPlane(SetVectorByAxis(targetVelocity, movementAxis, maxAirSpeed), gravityDirectionVector);
             }
-            //max speed not met yet
+            //Speed and input both negative
+            else if (currentAxisVelocity < 0 && inputSpeed < 0)
+            {
+                targetVelocity = Vector3.ProjectOnPlane(SetVectorByAxis(targetVelocity, movementAxis, -maxAirSpeed), gravityDirectionVector);
+            }
+            //Speed and input are opposite directions. Allow full player input
             else
             {
-                targetVelocity = Vector3.ProjectOnPlane(new Vector3(inputSpeed, rb.linearVelocity.y, 0), gravityDirectionVector);
+                targetVelocity = Vector3.ProjectOnPlane(SetVectorByAxis(targetVelocity, movementAxis, inputSpeed), gravityDirectionVector);
             }
-            //Add force using difference between current and target velocites
-            rb.AddForce(Vector3.ProjectOnPlane(targetVelocity - currentVelocity, gravityDirectionVector));
-            
-            //Correct minor momentum issues and enforce horizontal max air speed while jumping or falling without gravity change
-            float currentX = rb.linearVelocity.x;
-            float currentY = rb.linearVelocity.y;
-            //Jumps and regular falling should not be affected by input force
-            if (Mathf.Abs(currentX) > maxAirSpeed && (isJumping || !_useGravityMomentum))
-            {
-                //Set velocity directly
-                rb.linearVelocity = currentX < 0 ? new Vector3(-maxAirSpeed, currentY, 0) : new Vector3(maxAirSpeed, currentY, 0);
-            }
-
-            float correctedX = currentX;
-            float correctedY = currentY;
-            //if x or y velocities are still higher than the max speed, Lerp them to proper speed
-            //This does not apply to speed in direction of gravity
-            if (_useGravityMomentum && Mathf.Abs(currentX) > maxAirSpeed)
-            {
-                correctedX = currentX < 0 ? -maxAirSpeed : maxAirSpeed;
-            }
-            else if (_useGravityMomentum && currentY < -maxAirSpeed && direction == gravityDirection.Up)
-            {
-                correctedY = -maxAirSpeed;
-            }
-            else if (_useGravityMomentum && currentY > maxAirSpeed && direction == gravityDirection.Down)
-            {
-                correctedY = maxAirSpeed;
-            }
-            rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, new Vector3(correctedX, correctedY, 0), correction * Time.fixedDeltaTime);
         }
-        //Left and Right gravity calculations
+        //Speed has not reached max speed yet
         else
         {
-            //Ignore left and right inputs from the player, but still keep momentum that slowly fades with drag.
-            float inputSpeed = moveAction.action.ReadValue<Vector2>().y * airForce;
-
-            //If magnitude of current y velocity is greater than max air speed, set the target speed to the max air speed for the y axis
-            //Use user input if it is opposite direction of current velocity
-            if (Mathf.Abs(rb.linearVelocity.y) > maxAirSpeed)
-            {
-                if (rb.linearVelocity.y >= 0 && inputSpeed > 0)
-                {
-                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(rb.linearVelocity.x, maxAirSpeed, 0), gravityDirectionVector);
-                }
-                else if (rb.linearVelocity.y < 0 && inputSpeed < 0)
-                {
-                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(rb.linearVelocity.x, -maxAirSpeed, 0), gravityDirectionVector);
-                }
-                else
-                {
-                    targetVelocity = Vector3.ProjectOnPlane(new Vector3(rb.linearVelocity.x, inputSpeed, 0), gravityDirectionVector);
-                }
-            }
-            //Speed and input are opposite directions
-            else
-            {
-                targetVelocity = Vector3.ProjectOnPlane(new Vector3(rb.linearVelocity.x, inputSpeed, 0), gravityDirectionVector);
-            }
-            //Add force using difference between current and target velocites
-            rb.AddForce(Vector3.ProjectOnPlane(targetVelocity - currentVelocity, gravityDirectionVector));
-
-            //Correct minor momentum issues and enforce horizontal max air speed while jumping or falling without gravity change
-            float currentX = rb.linearVelocity.x;
-            float currentY = rb.linearVelocity.y;
-            //Jumps and regular falling should not be affected by input force
-            if (Mathf.Abs(rb.linearVelocity.y) > maxAirSpeed && (isJumping || !_useGravityMomentum))
-            {
-                rb.linearVelocity = currentY < 0 ? new Vector3(currentX, -maxAirSpeed, 0) : new Vector3(currentX, maxAirSpeed, 0);
-            }
-
-            float correctedX = currentX;
-            float correctedY = currentY;
-            //if x or y velocities are still higher than the max speed, Lerp them to proper speed
-            //This does not apply to speed in direction of gravity
-            if (_useGravityMomentum && Mathf.Abs(currentY) > maxAirSpeed)
-            {
-                correctedY = currentY < 0 ? -maxAirSpeed : maxAirSpeed;
-            }
-            else if (_useGravityMomentum && currentX < -maxAirSpeed && direction == gravityDirection.Right)
-            {
-                correctedX = -maxAirSpeed;
-            }
-            else if (_useGravityMomentum && currentX > maxAirSpeed && direction == gravityDirection.Left)
-            {
-                correctedX = maxAirSpeed;
-            }
-            rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, new Vector3(correctedX, correctedY, 0), correction * Time.fixedDeltaTime);
+            targetVelocity = Vector3.ProjectOnPlane(SetVectorByAxis(targetVelocity, movementAxis, inputSpeed), gravityDirectionVector);
         }
+
+        //Add force using difference between current and target velocites
+        rb.AddForce(Vector3.ProjectOnPlane(targetVelocity - currentVelocity, gravityDirectionVector));
+        //Correct momentum
+        CorrectMomentum();
+    }
+
+    //Fix minor momentum issues after air force is applied
+    private void CorrectMomentum()
+    {
+        Vector3 currentVelocity = rb.linearVelocity;
+        float moveAxisSpeed = GetAxisValue(currentVelocity, movementAxis);
+        float gravityAxisSpeed = GetAxisValue(currentVelocity, gravityAxis);
+
+        //Jumps and regular falling should be set to max speed directly instead of lerping
+        if (Mathf.Abs(moveAxisSpeed) > maxAirSpeed && (isJumping || !_useGravityMomentum))
+        {
+            float finalAirSpeed = moveAxisSpeed < 0 ? -maxAirSpeed : maxAirSpeed;
+            rb.linearVelocity = SetVectorByAxis(currentVelocity, movementAxis, finalAirSpeed);
+        }
+
+        float correctedMoveSpeed = moveAxisSpeed;
+        float correctedGravitySpeed = gravityAxisSpeed;
+        //if x or y velocities are still higher than the max speed during gravity change, Lerp them to proper speed
+        //This does not apply to speed in direction of gravity
+        if (_useGravityMomentum)
+        {
+            //movement axis speed correction
+            if (Mathf.Abs(moveAxisSpeed) > maxAirSpeed)
+            {
+                correctedMoveSpeed = moveAxisSpeed < 0 ? -maxAirSpeed : maxAirSpeed;
+            }
+            //gravity axis speed correction
+            else if (gravityAxisSpeed < -maxAirSpeed && (_direction == GravityDirection.Up || _direction == GravityDirection.Right))
+            {
+                correctedGravitySpeed = -maxAirSpeed;
+            }
+            else if (gravityAxisSpeed > maxAirSpeed && (_direction == GravityDirection.Down || _direction == GravityDirection.Left))
+            {
+                correctedGravitySpeed = maxAirSpeed;
+            }
+        }
+        
+        Vector3 correctedVelo = currentVelocity;
+        //Correct both axes
+        correctedVelo = SetVectorByAxis(correctedVelo, movementAxis, correctedMoveSpeed);
+        correctedVelo = SetVectorByAxis(correctedVelo, gravityAxis, correctedGravitySpeed);
+        rb.linearVelocity = Vector3.Lerp(currentVelocity, correctedVelo, correction * Time.fixedDeltaTime);
     }
 
     //Check if any objects player is touching is ground
@@ -441,4 +377,29 @@ public class PlayerController : MonoBehaviour
             //maxLandingMomentum = Vector3.zero;
         }
     }
-}
+
+    //Return the x or y value of a vector, depending on which axis is being used
+    private float GetAxisValue(Vector3 v, Axis axis)
+    {
+        return axis == Axis.X ? v.x : v.y;
+    }
+    private float GetAxisValue(Vector2 v, Axis axis)
+    {
+        return axis == Axis.X ? v.x : v.y;
+    }
+
+    //Sets the x and y values of a vector depending on the current axis
+    //For air movement, inputSpeed and currentSpeed are used for x and y depending on axis
+    private Vector3 SetVectorByAxis(Vector3 v, Axis axis, float value)
+    {
+        if (axis == Axis.X)
+        {
+            v.x = value;
+        }
+        else
+        {
+            v.y = value;
+        }
+        return v;
+    }
+ }
