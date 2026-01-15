@@ -7,8 +7,8 @@ public class GravityZoneController : MonoBehaviour
     InputAction gravityAction;
     [SerializeField] private float gravityForce = -29.43f;
     //InputAction directionAction;
-    private enum GravityDirection { Up, Right, Down, Left };
-    [SerializeField] private GravityDirection direction;
+    public enum GravityDirection { Up, Right, Down, Left };
+    [SerializeField] public GravityDirection direction;
     private Vector3 forceDirection;
     //private GravityDirection previousDir;
     [SerializeField] private Vector3 upGravity;
@@ -128,4 +128,6 @@ public class GravityZoneController : MonoBehaviour
             }
         }
     }
+    //TODO: Change wall color to match gravity direction.
+    //Implement modes
 }

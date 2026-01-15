@@ -141,7 +141,7 @@ public class PlayerController : MonoBehaviour
         //Movement calculated using player input, momentum, and grounded state
         if (isGrounded)
         {
-            MoveOnGroundTwo();
+            MoveOnGround();
         }
         //Only allow air input while toggle is true
         else if (allowAirMovement)
@@ -167,7 +167,7 @@ public class PlayerController : MonoBehaviour
 
     //Ground movement is tight and precise
     //Momentum from air is present, but diminishes quickly over time and by player input
-    private void MoveOnGroundTwo()
+    private void MoveOnGround()
     {
         //Briefly reduce ground speed if landing timer is being used to simulate ground impact
         //Set landing timer and max landing timer to 1 to ignore effect entirely
@@ -213,6 +213,12 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
+
+    //
+    //TODO: Fix issue where falling velocity during gravity change is seemingly slower than it's supposed to
+    //It could be being incorrectly limited by max air speed
+    //Issue does not happen when falling or jumping
+    //
 
     //Player movement in air dependant on gravity direction. Floatier than ground movement, preservs momentum
     //User input applies force, then minor corrections are done to handle changing gravity directions and max speeds
@@ -300,6 +306,17 @@ public class PlayerController : MonoBehaviour
         rb.linearVelocity = Vector3.Lerp(currentVelocity, correctedVelo, correction * Time.fixedDeltaTime);
     }
 
+    private void OnTriggerEnter(Collider other)
+    {
+        Debug.Log("Trigger Enter");
+        if (other.gameObject.tag == "Switch")
+        {
+            Debug.Log("Collided with Switch");
+            GravitySwitchController gsc = other.gameObject.GetComponent<GravitySwitchController>();
+            gsc.SwitchGravityForZones();
+        }
+    }
+
     //Check if any objects player is touching is ground
     private void OnCollisionStay(Collision collision)
     {
@@ -334,11 +351,14 @@ public class PlayerController : MonoBehaviour
 
     private void OnCollisionExit(Collision collision)
     {
-        //When player exits collision, remove it from ground set if it was a grounded object
-        if (groundedObjects.Contains(collision.collider.gameObject))
+        //When player exits ground collision, remove it from ground set if it was a grounded object
+        if (LayerMask.LayerToName(collision.collider.gameObject.layer).Equals("Structure"))
         {
-            groundedObjects.Remove(collision.collider.gameObject);
-        }
+            if (groundedObjects.Contains(collision.collider.gameObject))
+            {
+                groundedObjects.Remove(collision.collider.gameObject);
+            }
+        } 
     }
 
     //Used to determine if the player is currently on the ground or in a grounded state
