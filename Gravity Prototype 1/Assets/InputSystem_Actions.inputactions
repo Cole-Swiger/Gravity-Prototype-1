@@ -95,6 +95,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Mode Switch",
+                    "type": "Button",
+                    "id": "031f376c-0cbf-4c39-811d-1dd50936ec5a",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -744,6 +753,105 @@
                     "processors": "",
                     "groups": "",
                     "action": "Gravity Switch",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "Button With One Modifier",
+                    "id": "916d4329-28e3-4c74-94fc-90b18778fcbe",
+                    "path": "ButtonWithOneModifier",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Mode Switch",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "Modifier",
+                    "id": "d8191e3c-2446-450e-bffa-985772bbced0",
+                    "path": "<Keyboard>/shift",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Mode Switch",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "Button",
+                    "id": "1e8eaa30-57f8-4023-a56a-c507886b11fe",
+                    "path": "<Keyboard>/b",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Mode Switch",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "Button With One Modifier",
+                    "id": "52fd8c72-ec6b-4cca-9610-dff06f43c8a7",
+                    "path": "ButtonWithOneModifier",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Mode Switch",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "Modifier",
+                    "id": "8ee52b8a-5877-4f78-ba24-7fce03a2775a",
+                    "path": "<Keyboard>/shift",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Mode Switch",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "Button",
+                    "id": "421d2927-e3b9-41ae-aa3d-d86e1231b709",
+                    "path": "<Keyboard>/n",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Mode Switch",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "Button With One Modifier",
+                    "id": "450f688f-94a7-471c-844a-78147dcfc0b7",
+                    "path": "ButtonWithOneModifier",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Mode Switch",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "Modifier",
+                    "id": "7f540390-ce23-4eff-ba42-7f9f3997d5fa",
+                    "path": "<Keyboard>/shift",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Mode Switch",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "Button",
+                    "id": "408f9f30-68e4-4111-8a8f-dd15bf871241",
+                    "path": "<Keyboard>/m",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Mode Switch",
                     "isComposite": false,
                     "isPartOfComposite": true
                 }

@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class GravitySwitchController : MonoBehaviour
 {
@@ -27,9 +28,28 @@ public class GravitySwitchController : MonoBehaviour
     [SerializeField] private Material materialLeft;
     [SerializeField] private Material materialUp;
 
+    //Mode
+    [SerializeField] private GameObject actionManager;
+    private ActionManagerController.GameMode gameMode;
+
+    private void Awake()
+    {
+        //modeAction = InputSystem.actions.FindAction("Mode Switch");
+    }
+
+    private void OnEnable()
+    {
+        //modeAction.performed += OnModeActionPerformed;
+    }
+    private void OnDisable()
+    {
+        //modeAction.performed -= OnModeActionPerformed;
+    }
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        gameMode = actionManager.GetComponent<ActionManagerController>().mode;
         AssignMaterial();
     }
 
@@ -47,7 +67,7 @@ public class GravitySwitchController : MonoBehaviour
             foreach (GameObject go in gravityZones) 
             { 
                 GravityZoneController gzc = go.GetComponent<GravityZoneController>();
-                gzc.direction = (GravityZoneController.GravityDirection) direction;
+                gzc.direction = (GravityZoneController.GravityDirection) _direction;
             }
         }
     }
@@ -56,7 +76,7 @@ public class GravitySwitchController : MonoBehaviour
     private void AssignMaterial()
     {
         Material switchMaterial;
-        switch (direction)
+        switch (_direction)
         {
             case GravityDirection.Up:
                 switchMaterial = materialUp;
@@ -77,6 +97,40 @@ public class GravitySwitchController : MonoBehaviour
 
         GetComponent<MeshRenderer>().material = switchMaterial;
     }
+
+    //Does not work. Switch to Event System
+    /*
+    private void OnModeActionPerformed(InputAction.CallbackContext context)
+    {
+        string input = context.control.name;
+
+        switch (input)
+        {
+            //b for both
+            case "b":
+                gameMode = ActionManagerController.GameMode.Both;
+                break;
+            //n for no switches, so free
+            case "n":
+                gameMode = ActionManagerController.GameMode.Free;
+                break;
+            //m for more switches, so switch
+            case "m":
+                gameMode = ActionManagerController.GameMode.Switch;
+                break;
+        }
+        Debug.Log("Current Game Mode: " + gameMode);
+
+        if (isActiveAndEnabled && gameMode == ActionManagerController.GameMode.Free)
+        {
+            gameObject.SetActive(false);
+        }
+        else if (!isActiveAndEnabled && (gameMode == ActionManagerController.GameMode.Switch || gameMode == ActionManagerController.GameMode.Both))
+        {
+            gameObject.SetActive(true);
+        }
+    }*/
     //TODO: Visually press down while player is in contact
     //Add switches to every wall
+    //Work with Action Manager for mode change
 }

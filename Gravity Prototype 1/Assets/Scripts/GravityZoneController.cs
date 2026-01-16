@@ -4,11 +4,22 @@ using UnityEngine.InputSystem;
 public class GravityZoneController : MonoBehaviour
 {
     //gravity
-    InputAction gravityAction;
+    private InputAction gravityAction;
     [SerializeField] private float gravityForce = -29.43f;
-    //InputAction directionAction;
     public enum GravityDirection { Up, Right, Down, Left };
-    [SerializeField] public GravityDirection direction;
+    private GravityDirection _direction;
+    public GravityDirection direction
+    {
+        get { return _direction; }
+        set
+        {
+            if (_direction != value)
+            {
+                _direction = value;
+                AssignMaterial();
+            }
+        }
+    }
     private Vector3 forceDirection;
     //private GravityDirection previousDir;
     [SerializeField] private Vector3 upGravity;
@@ -17,23 +28,35 @@ public class GravityZoneController : MonoBehaviour
     [SerializeField] private Vector3 leftGravity;
 
     //mode
-    private enum gameMode { Free, Switch, Both };
-    [SerializeField] private gameMode mode;
+    //private InputAction modeAction;
+    //private enum GameMode { Free, Switch, Both };
+    [SerializeField] private GameObject actionManager;
+    private ActionManagerController.GameMode mode;
+
+    //Materials
+    [SerializeField] private Material assignedMaterial;
+    [SerializeField] private Material materialDown;
+    [SerializeField] private Material materialRight;
+    [SerializeField] private Material materialLeft;
+    [SerializeField] private Material materialUp;
 
     private void Awake()
     {
         //Called before OnEnable
         gravityAction = InputSystem.actions.FindAction("Gravity Switch");
+        //modeAction = InputSystem.actions.FindAction("Mode Switch");
     }
 
     private void OnEnable()
     {
         gravityAction.performed += OnGravityActionPerformed;
+        //modeAction.performed += OnModeActionPerformed;
     }
 
     private void OnDisable()
     {
         gravityAction.performed -= OnGravityActionPerformed;
+        //modeAction.performed -= OnModeActionPerformed;
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -48,13 +71,14 @@ public class GravityZoneController : MonoBehaviour
         downGravity = new Vector3(0, gravityForce, 0);
         leftGravity = new Vector3(gravityForce, 0, 0);
 
-        mode = gameMode.Free;
+        mode = actionManager.GetComponent<ActionManagerController>().mode;
+        AssignMaterial();
     }
 
     // Update is called once per frame
     void Update()
     {
-     
+        mode = actionManager.GetComponent<ActionManagerController>().mode;
     }
 
     private void OnTriggerStay(Collider other)
@@ -62,7 +86,7 @@ public class GravityZoneController : MonoBehaviour
         //Only affect movable objects
         if (other.attachedRigidbody && other.tag == "Movable")
         {   
-            switch (direction)
+            switch (_direction)
             {
                 case GravityDirection.Up:
                     forceDirection = upGravity;
@@ -83,9 +107,9 @@ public class GravityZoneController : MonoBehaviour
             {
                 PlayerController pc = other.GetComponent<PlayerController>();
                 //Change gravity direction and cancel jumping if gravity direction is different
-                if (pc.direction != (PlayerController.GravityDirection) direction)
+                if (pc.direction != (PlayerController.GravityDirection) _direction)
                 {
-                    pc.direction = (PlayerController.GravityDirection)direction;
+                    pc.direction = (PlayerController.GravityDirection) _direction;
                     pc.gravityDirectionVector = forceDirection.normalized;
                     //Use gravity momentum and physics instead of jumping
                     pc.isJumping = false;
@@ -100,7 +124,7 @@ public class GravityZoneController : MonoBehaviour
 
     private void OnGravityActionPerformed(InputAction.CallbackContext context)
     {
-        if (mode == gameMode.Free || mode == gameMode.Both)
+        if (mode == ActionManagerController.GameMode.Free || mode == ActionManagerController.GameMode.Both)
         {
             /*Debug.Log("Action performed: " + context);
             Debug.Log("Active Control: " + context.control);
@@ -128,6 +152,57 @@ public class GravityZoneController : MonoBehaviour
             }
         }
     }
-    //TODO: Change wall color to match gravity direction.
-    //Implement modes
+
+    //Now handled by Action Manager
+    /*private void OnModeActionPerformed(InputAction.CallbackContext context)
+    {
+        string input = context.control.name;
+
+        switch (input) 
+        {
+            //b for both
+            case "b":
+                mode = ActionManagerController.GameMode.Both;
+                break;
+            //n for no switches, so free
+            case "n":
+                mode = ActionManagerController.GameMode.Free;
+                break;
+            //m for more switches, so switch
+            case "m":
+                mode = ActionManagerController.GameMode.Switch;
+                break;
+        }
+        Debug.Log("Current Game Mode: " + mode);
+    }*/
+
+    //Update material to indicate gravity direction is applied
+    //Change back wall color to match gravity direction
+    private void AssignMaterial()
+    {
+        Material switchMaterial;
+        switch (_direction)
+        {
+            case GravityDirection.Up:
+                switchMaterial = materialUp;
+                break;
+            case GravityDirection.Right:
+                switchMaterial = materialRight;
+                break;
+            case GravityDirection.Left:
+                switchMaterial = materialLeft;
+                break;
+            case GravityDirection.Down:
+                switchMaterial = materialDown;
+                break;
+            default:
+                switchMaterial = assignedMaterial;
+                break;
+        }
+
+        if (transform.parent != null) 
+        {
+            transform.parent.Find("Back Wall").GetComponent<MeshRenderer>().material = switchMaterial;
+        }     
+    }
 }

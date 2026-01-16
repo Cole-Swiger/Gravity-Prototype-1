@@ -154,6 +154,7 @@ GameObject:
   m_Component:
   - component: {fileID: 841551401740965390}
   - component: {fileID: 257452682678821984}
+  - component: {fileID: 6964961061905833009}
   m_Layer: 0
   m_Name: Zone
   m_TagString: Untagged
@@ -197,3 +198,26 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 2}
   m_Center: {x: 0, y: 0, z: -0.5}
+--- !u!114 &6964961061905833009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6672857245417769426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71cee78fbf15cc5498fe7d22adef469f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GravityZoneController
+  gravityForce: -40
+  upGravity: {x: 0, y: 0, z: 0}
+  rightGravity: {x: 0, y: 0, z: 0}
+  downGravity: {x: 0, y: 0, z: 0}
+  leftGravity: {x: 0, y: 0, z: 0}
+  mode: 0
+  assignedMaterial: {fileID: 2100000, guid: 55c66c4b46987a0498a8ea778010f3d1, type: 2}
+  materialDown: {fileID: 2100000, guid: 4e19d4905dbe68a41a8d0802e7f46d9e, type: 2}
+  materialRight: {fileID: 2100000, guid: cf43f6c8ec3150a49a1fedb623532f0f, type: 2}
+  materialLeft: {fileID: 2100000, guid: 80e66070fbf827c458e97d9261c89f88, type: 2}
+  materialUp: {fileID: 2100000, guid: 30e9d33c866456c4d8eb9ef2806c7e1d, type: 2}

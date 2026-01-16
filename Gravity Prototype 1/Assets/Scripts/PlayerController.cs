@@ -39,7 +39,7 @@ public class PlayerController : MonoBehaviour
         set
         {
             _useGravityMomentum = value;
-            rb.linearDamping = _useGravityMomentum ? 2f : 0;
+            //rb.linearDamping = _useGravityMomentum ? 2f : 0;
         }
     }
 
@@ -422,4 +422,6 @@ public class PlayerController : MonoBehaviour
         }
         return v;
     }
+    //TODO:
+    //Unify GravityDirection enum under GravityZoneController, instead of separate enum for each object
  }
