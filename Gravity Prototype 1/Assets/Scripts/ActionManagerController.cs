@@ -1,12 +1,17 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Events;
 
 public class ActionManagerController : MonoBehaviour
 {
     //Mode
     private InputAction modeAction;
     public enum GameMode { Free, Switch, Both };
-    [SerializeField] public GameMode mode;
+    public GameMode mode;
+
+    //Events
+    //Used to tell other classes when the game mode is updated
+    public UnityEvent modeUpdateEvent;
 
     private void Awake()
     {
@@ -33,7 +38,8 @@ public class ActionManagerController : MonoBehaviour
         
     }
 
-    //Update Game Mode
+    //Update Game Mode when action is performed
+    //Game mode affects if switches work or if actions can update gravity
     private void OnModeActionPerformed(InputAction.CallbackContext context)
     {
         string input = context.control.name;
@@ -54,8 +60,7 @@ public class ActionManagerController : MonoBehaviour
                 break;
         }
         Debug.Log("Current Game Mode: " + mode);
+        //Invoke event to inform other classes
+        modeUpdateEvent.Invoke();
     }
-
-    //TODO:
-    //Make it like an event system where actions happen here then are sent to relevent objects
 }

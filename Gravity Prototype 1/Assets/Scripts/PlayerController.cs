@@ -53,38 +53,26 @@ public class PlayerController : MonoBehaviour
     private float landingTimer = 1f;
     public bool isJumping = false;
 
-    //gravity
-    //InputAction gravityAction;
-    //InputAction directionAction;
-    public enum GravityDirection { Up, Right, Down, Left };
-    private GravityDirection _direction;
-    public GravityDirection direction
+    //Gravity
+    private GravityZoneController.GravityDirection _direction;
+    public GravityZoneController.GravityDirection direction
     {
         get { return _direction; }
         set
         {
             _direction = value;
-            bool verticalDirection = _direction == GravityDirection.Up || _direction == GravityDirection.Down;
+            bool verticalDirection = _direction == GravityZoneController.GravityDirection.Up || _direction == GravityZoneController.GravityDirection.Down;
             movementAxis = verticalDirection ? Axis.X : Axis.Y;
             gravityAxis = verticalDirection ? Axis.Y : Axis.X;
         }
     }
     //Set by gravity zone, default to down
     public Vector3 gravityDirectionVector = Vector3.down;
-    /*private GravityDirection previousDir;
-    [SerializeField] private Vector3 upGravity = new Vector3(0, -1f, 0);
-    [SerializeField] private Vector3 rightGravity = new Vector3(1f, 0, 0);
-    [SerializeField] private Vector3 downGravity = new Vector3(0, 1f, 0);
-    [SerializeField] private Vector3 leftGravity = new Vector3(-1f, 0, 0);*/
     //Angle when floor becomes a wall
     [SerializeField] private float floorAngleLimit = .707f; //about 45 degrees
     private enum Axis { X, Y };
     private Axis movementAxis;
     private Axis gravityAxis;
-
-    //mode
-    //private enum gameMode {Free, Switch, Both};
-    //[SerializeField] private gameMode mode;
 
     private void Awake()
     {
@@ -106,11 +94,6 @@ public class PlayerController : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        //Set default game mode and gravity
-        //mode = gameMode.Free;
-        //direction = GravityDirection.Down;
-        //previousDir = GravityDirection.Down;
-
         //Set input actions
         //moveAction = InputSystem.actions.FindAction("Move");
 
@@ -121,8 +104,6 @@ public class PlayerController : MonoBehaviour
         movementAxis = Axis.X;
         gravityAxis= Axis.Y;
         //maxLandingMomentum = Vector3.zero;
-        //gravityAction = InputSystem.actions.FindAction("Gravity Switch");
-        //directionAction = InputSystem.actions.FindAction("Gravity Direction");
     }
 
     // Update is called once per frame
@@ -158,7 +139,7 @@ public class PlayerController : MonoBehaviour
         if (isGrounded)
         {
             //Direction determines which way to add velocity
-            float signedJumpForce = (_direction == GravityDirection.Up || _direction == GravityDirection.Right) ? -jumpForce : jumpForce;
+            float signedJumpForce = (_direction == GravityZoneController.GravityDirection.Up || _direction == GravityZoneController.GravityDirection.Right) ? -jumpForce : jumpForce;
             //Assign velocity directly to overcome higher gravity
             rb.linearVelocity = SetVectorByAxis(rb.linearVelocity, gravityAxis, signedJumpForce);
             isJumping = true;
@@ -213,12 +194,6 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
-
-    //
-    //TODO: Fix issue where falling velocity during gravity change is seemingly slower than it's supposed to
-    //It could be being incorrectly limited by max air speed
-    //Issue does not happen when falling or jumping
-    //
 
     //Player movement in air dependant on gravity direction. Floatier than ground movement, preservs momentum
     //User input applies force, then minor corrections are done to handle changing gravity directions and max speeds
@@ -289,11 +264,11 @@ public class PlayerController : MonoBehaviour
                 correctedMoveSpeed = moveAxisSpeed < 0 ? -maxAirSpeed : maxAirSpeed;
             }
             //gravity axis speed correction
-            else if (gravityAxisSpeed < -maxAirSpeed && (_direction == GravityDirection.Up || _direction == GravityDirection.Right))
+            else if (gravityAxisSpeed < -maxAirSpeed && (_direction == GravityZoneController.GravityDirection.Up || _direction == GravityZoneController.GravityDirection.Right))
             {
                 correctedGravitySpeed = -maxAirSpeed;
             }
-            else if (gravityAxisSpeed > maxAirSpeed && (_direction == GravityDirection.Down || _direction == GravityDirection.Left))
+            else if (gravityAxisSpeed > maxAirSpeed && (_direction == GravityZoneController.GravityDirection.Down || _direction == GravityZoneController.GravityDirection.Left))
             {
                 correctedGravitySpeed = maxAirSpeed;
             }
@@ -309,11 +284,20 @@ public class PlayerController : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         Debug.Log("Trigger Enter");
-        if (other.gameObject.tag == "Switch")
+        if (other.gameObject.CompareTag("Switch"))
         {
             Debug.Log("Collided with Switch");
             GravitySwitchController gsc = other.gameObject.GetComponent<GravitySwitchController>();
+            gsc.PressButton();
             gsc.SwitchGravityForZones();
+        }
+    }
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject.CompareTag("Switch"))
+        {
+            GravitySwitchController gsc = other.gameObject.GetComponent<GravitySwitchController>();
+            gsc.RaiseButton();
         }
     }
 
@@ -422,6 +406,4 @@ public class PlayerController : MonoBehaviour
         }
         return v;
     }
-    //TODO:
-    //Unify GravityDirection enum under GravityZoneController, instead of separate enum for each object
  }

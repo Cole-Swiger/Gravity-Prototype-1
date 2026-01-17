@@ -110,7 +110,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 1, y: 1.1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &6291043842921099894
 MonoBehaviour:
@@ -124,9 +124,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb8c86957d88f234383ba233a2ba2c05, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GravitySwitchController
-  gravityZones: []
+  _direction: 0
+  gravityZones:
+  - {fileID: 0}
   assignedMaterial: {fileID: 2100000, guid: e82f829d6ff30184e83d59e358b59c0d, type: 2}
   materialDown: {fileID: 2100000, guid: 1b19f4e9635bd0b42b14c9513b29f5f6, type: 2}
   materialRight: {fileID: 2100000, guid: 04dd22c7b5e380e40a82a5db8ccf2f7a, type: 2}
   materialLeft: {fileID: 2100000, guid: 49725c030e193a74e99d0d4faa85f70a, type: 2}
   materialUp: {fileID: 2100000, guid: 808daee4e1f54a941989f9a1afce9e9d, type: 2}
+  actionManager: {fileID: 0}
+  pressValue: 0.049

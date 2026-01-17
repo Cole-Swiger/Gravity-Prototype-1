@@ -5,9 +5,9 @@ using UnityEngine.InputSystem;
 public class GravitySwitchController : MonoBehaviour
 {
     //Gravity
-    public enum GravityDirection { Up, Right, Down, Left };
-    [SerializeField] private GravityDirection _direction;
-    public GravityDirection direction 
+    //public enum GravityDirection { Up, Right, Down, Left };
+    [SerializeField] private GravityZoneController.GravityDirection _direction;
+    public GravityZoneController.GravityDirection direction 
     { 
       get { return _direction;}
       set 
@@ -30,26 +30,27 @@ public class GravitySwitchController : MonoBehaviour
 
     //Mode
     [SerializeField] private GameObject actionManager;
+    private ActionManagerController amController;
     private ActionManagerController.GameMode gameMode;
+    private bool areSwitchesEnabled = true;
+
+    //Press
+    //Used to show button pressing in when player makes contact
+    [SerializeField] private float pressValue = 0.04f;
 
     private void Awake()
     {
-        //modeAction = InputSystem.actions.FindAction("Mode Switch");
-    }
 
-    private void OnEnable()
-    {
-        //modeAction.performed += OnModeActionPerformed;
-    }
-    private void OnDisable()
-    {
-        //modeAction.performed -= OnModeActionPerformed;
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        gameMode = actionManager.GetComponent<ActionManagerController>().mode;
+        //Action manager handles mode switching
+        amController = actionManager.GetComponent<ActionManagerController>();
+        gameMode = amController.mode;
+        //Listen for mode update event from action manager
+        amController.modeUpdateEvent.AddListener(OnModeUpdate);
         AssignMaterial();
     }
 
@@ -59,10 +60,11 @@ public class GravitySwitchController : MonoBehaviour
         
     }
 
+    //When button is pressed and switch is enabled, change gravity direction for associated zone
     public void SwitchGravityForZones()
     {
         Debug.Log("Switch Method called");
-        if (gravityZones.Length > 0) 
+        if (areSwitchesEnabled && gravityZones.Length > 0) 
         {
             foreach (GameObject go in gravityZones) 
             { 
@@ -72,65 +74,54 @@ public class GravitySwitchController : MonoBehaviour
         }
     }
 
-    //Update material to indicate gravity direction that will be applied
+    //Visually press button down relative to self
+    public void PressButton()
+    {
+        transform.position += transform.up * -pressValue;
+    }
+    //Visually raise button after player exits trigger
+    public void RaiseButton()
+    {
+        transform.position += transform.up * pressValue;
+    }
+
+    //Update material for switch to indicate gravity direction that will be applied
     private void AssignMaterial()
     {
         Material switchMaterial;
-        switch (_direction)
+        if (areSwitchesEnabled)
         {
-            case GravityDirection.Up:
-                switchMaterial = materialUp;
-                break;
-            case GravityDirection.Right:
-                switchMaterial = materialRight;
-                break;
-            case GravityDirection.Left:
-                switchMaterial = materialLeft;
-                break;
-            case GravityDirection.Down:
-                switchMaterial = materialDown;
-                break;
-            default:
-                switchMaterial = assignedMaterial;
-                break;
+            switch (_direction)
+            {
+                case GravityZoneController.GravityDirection.Up:
+                    switchMaterial = materialUp;
+                    break;
+                case GravityZoneController.GravityDirection.Right:
+                    switchMaterial = materialRight;
+                    break;
+                case GravityZoneController.GravityDirection.Left:
+                    switchMaterial = materialLeft;
+                    break;
+                case GravityZoneController.GravityDirection.Down:
+                    switchMaterial = materialDown;
+                    break;
+                default:
+                    switchMaterial = assignedMaterial;
+                    break;
+            }
         }
-
-        GetComponent<MeshRenderer>().material = switchMaterial;
+        else
+        {
+            switchMaterial = assignedMaterial;
+        }
+            GetComponent<MeshRenderer>().material = switchMaterial;
     }
 
-    //Does not work. Switch to Event System
-    /*
-    private void OnModeActionPerformed(InputAction.CallbackContext context)
+    //On Mode Update event from Action Manager
+    private void OnModeUpdate()
     {
-        string input = context.control.name;
-
-        switch (input)
-        {
-            //b for both
-            case "b":
-                gameMode = ActionManagerController.GameMode.Both;
-                break;
-            //n for no switches, so free
-            case "n":
-                gameMode = ActionManagerController.GameMode.Free;
-                break;
-            //m for more switches, so switch
-            case "m":
-                gameMode = ActionManagerController.GameMode.Switch;
-                break;
-        }
-        Debug.Log("Current Game Mode: " + gameMode);
-
-        if (isActiveAndEnabled && gameMode == ActionManagerController.GameMode.Free)
-        {
-            gameObject.SetActive(false);
-        }
-        else if (!isActiveAndEnabled && (gameMode == ActionManagerController.GameMode.Switch || gameMode == ActionManagerController.GameMode.Both))
-        {
-            gameObject.SetActive(true);
-        }
-    }*/
-    //TODO: Visually press down while player is in contact
-    //Add switches to every wall
-    //Work with Action Manager for mode change
+        gameMode = amController.mode;
+        areSwitchesEnabled = gameMode == ActionManagerController.GameMode.Free ? false : true;
+        AssignMaterial();
+    }
 }

@@ -107,9 +107,9 @@ public class GravityZoneController : MonoBehaviour
             {
                 PlayerController pc = other.GetComponent<PlayerController>();
                 //Change gravity direction and cancel jumping if gravity direction is different
-                if (pc.direction != (PlayerController.GravityDirection) _direction)
+                if (pc.direction != _direction)
                 {
-                    pc.direction = (PlayerController.GravityDirection) _direction;
+                    pc.direction = _direction;
                     pc.gravityDirectionVector = forceDirection.normalized;
                     //Use gravity momentum and physics instead of jumping
                     pc.isJumping = false;
@@ -152,29 +152,6 @@ public class GravityZoneController : MonoBehaviour
             }
         }
     }
-
-    //Now handled by Action Manager
-    /*private void OnModeActionPerformed(InputAction.CallbackContext context)
-    {
-        string input = context.control.name;
-
-        switch (input) 
-        {
-            //b for both
-            case "b":
-                mode = ActionManagerController.GameMode.Both;
-                break;
-            //n for no switches, so free
-            case "n":
-                mode = ActionManagerController.GameMode.Free;
-                break;
-            //m for more switches, so switch
-            case "m":
-                mode = ActionManagerController.GameMode.Switch;
-                break;
-        }
-        Debug.Log("Current Game Mode: " + mode);
-    }*/
 
     //Update material to indicate gravity direction is applied
     //Change back wall color to match gravity direction
