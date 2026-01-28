@@ -24,6 +24,7 @@ public class PlayerController : MonoBehaviour
     //Force applied from input during gravity direction change in air
     [SerializeField] private float gravityAirForce = 2f;
     [SerializeField] private float maxAirSpeed = 5f;
+    [SerializeField] private float maxGravityAirSpeed = 2.5f;
     [SerializeField] private float correction = 20f;
     private Vector3 landingMomentum;
     //private Vector3 maxLandingMomentum;
@@ -206,19 +207,20 @@ public class PlayerController : MonoBehaviour
         //Depends on current movement axis
         float inputSpeed = GetAxisValue(moveAction.action.ReadValue<Vector2>(), movementAxis) * inputForce;
         float currentAxisVelocity = GetAxisValue(currentVelocity, movementAxis);
+        float currentMaxAirSpeed = _useGravityMomentum ? maxGravityAirSpeed : maxAirSpeed;
 
         //Clamp movement speed to max air speed
-        if (Mathf.Abs(currentAxisVelocity) > maxAirSpeed)
+        if (Mathf.Abs(currentAxisVelocity) > currentMaxAirSpeed)
         {
             //Speed and input both positive
             if (currentAxisVelocity >= 0 && inputSpeed > 0)
             {
-                targetVelocity = Vector3.ProjectOnPlane(SetVectorByAxis(targetVelocity, movementAxis, maxAirSpeed), gravityDirectionVector);
+                targetVelocity = Vector3.ProjectOnPlane(SetVectorByAxis(targetVelocity, movementAxis, currentMaxAirSpeed), gravityDirectionVector);
             }
             //Speed and input both negative
             else if (currentAxisVelocity < 0 && inputSpeed < 0)
             {
-                targetVelocity = Vector3.ProjectOnPlane(SetVectorByAxis(targetVelocity, movementAxis, -maxAirSpeed), gravityDirectionVector);
+                targetVelocity = Vector3.ProjectOnPlane(SetVectorByAxis(targetVelocity, movementAxis, -currentMaxAirSpeed), gravityDirectionVector);
             }
             //Speed and input are opposite directions. Allow full player input
             else
@@ -244,11 +246,12 @@ public class PlayerController : MonoBehaviour
         Vector3 currentVelocity = rb.linearVelocity;
         float moveAxisSpeed = GetAxisValue(currentVelocity, movementAxis);
         float gravityAxisSpeed = GetAxisValue(currentVelocity, gravityAxis);
+        float currentMaxAirSpeed = _useGravityMomentum ? maxGravityAirSpeed : maxAirSpeed;
 
         //Jumps and regular falling should be set to max speed directly instead of lerping
-        if (Mathf.Abs(moveAxisSpeed) > maxAirSpeed && (isJumping || !_useGravityMomentum))
+        if (Mathf.Abs(moveAxisSpeed) > currentMaxAirSpeed && (isJumping || !_useGravityMomentum))
         {
-            float finalAirSpeed = moveAxisSpeed < 0 ? -maxAirSpeed : maxAirSpeed;
+            float finalAirSpeed = moveAxisSpeed < 0 ? -currentMaxAirSpeed : currentMaxAirSpeed;
             rb.linearVelocity = SetVectorByAxis(currentVelocity, movementAxis, finalAirSpeed);
         }
 
@@ -259,18 +262,18 @@ public class PlayerController : MonoBehaviour
         if (_useGravityMomentum)
         {
             //movement axis speed correction
-            if (Mathf.Abs(moveAxisSpeed) > maxAirSpeed)
+            if (Mathf.Abs(moveAxisSpeed) > currentMaxAirSpeed)
             {
-                correctedMoveSpeed = moveAxisSpeed < 0 ? -maxAirSpeed : maxAirSpeed;
+                correctedMoveSpeed = moveAxisSpeed < 0 ? -currentMaxAirSpeed : currentMaxAirSpeed;
             }
             //gravity axis speed correction
-            else if (gravityAxisSpeed < -maxAirSpeed && (_direction == GravityZoneController.GravityDirection.Up || _direction == GravityZoneController.GravityDirection.Right))
+            else if (gravityAxisSpeed < -currentMaxAirSpeed && (_direction == GravityZoneController.GravityDirection.Up || _direction == GravityZoneController.GravityDirection.Right))
             {
-                correctedGravitySpeed = -maxAirSpeed;
+                correctedGravitySpeed = -currentMaxAirSpeed;
             }
-            else if (gravityAxisSpeed > maxAirSpeed && (_direction == GravityZoneController.GravityDirection.Down || _direction == GravityZoneController.GravityDirection.Left))
+            else if (gravityAxisSpeed > currentMaxAirSpeed && (_direction == GravityZoneController.GravityDirection.Down || _direction == GravityZoneController.GravityDirection.Left))
             {
-                correctedGravitySpeed = maxAirSpeed;
+                correctedGravitySpeed = currentMaxAirSpeed;
             }
         }
         
