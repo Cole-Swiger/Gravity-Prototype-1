@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Windows;
@@ -43,6 +44,23 @@ public class PlayerController : MonoBehaviour
             //rb.linearDamping = _useGravityMomentum ? 2f : 0;
         }
     }
+    //Do not use momentum if player releases input immediately after falling off edge
+    [SerializeField] private bool justLeftEdge = false;
+    [SerializeField] private bool useEdgeBuffer = false;
+    [SerializeField] private float edgeTimer = 0.05f;
+    private float currentEdgeTimer;
+    /*
+    Will not use this feature in this prototype
+    Idea was to make all air movement the same regardless of gravity, but reduce strength of user input over time
+    I wanted to do this because players have full air movement when falling from great heights, but little movement when falling from gravity change
+    It would take a lot of reworking to make this happen, but it might feel better as is. More testing will be done before making decision
+    //After certain amount of time in air, reduce strength of user input quickly to 0
+    [SerializeField] private float fallInputTimer = 0.75f;
+    private float currentFallTimer;
+    [SerializeField] private float maxFallInputStrength = 1f;
+    [SerializeField] private float currentFallInputStrength;
+    [SerializeField] private bool degradeInput = false;
+    [SerializeField] private float inputDegradeSpeed = 0.2f;*/
 
     //Jump
     InputAction jumpAction;
@@ -104,7 +122,10 @@ public class PlayerController : MonoBehaviour
         landingMomentum = Vector3.zero;
         movementAxis = Axis.X;
         gravityAxis= Axis.Y;
-        //maxLandingMomentum = Vector3.zero;
+
+        currentEdgeTimer = edgeTimer;
+        //currentFallTimer = fallInputTimer;
+        //currentFallInputStrength = maxFallInputStrength;
     }
 
     // Update is called once per frame
@@ -119,15 +140,19 @@ public class PlayerController : MonoBehaviour
         CalculateGroundedState();
         //If landing momentum present, naturally reduce it over time. Player input also lowers momentum separately
         CalculateNaturalMomentum();
+        //Determine if player just walked off edge
+        CalculateEdgeTimer();
 
         //Movement calculated using player input, momentum, and grounded state
-        if (isGrounded)
+        //Edge buffer briefly uses ground movement when player walks off an edge
+        if (isGrounded || useEdgeBuffer)
         {
             MoveOnGround();
         }
         //Only allow air input while toggle is true
         else if (allowAirMovement)
         {
+            //CalculateFallTimer();
             MoveInAir();
         }   
     }
@@ -205,7 +230,7 @@ public class PlayerController : MonoBehaviour
         //Allow less force from player during gravity change
         float inputForce = _useGravityMomentum ? gravityAirForce : airForce;
         //Depends on current movement axis
-        float inputSpeed = GetAxisValue(moveAction.action.ReadValue<Vector2>(), movementAxis) * inputForce;
+        float inputSpeed = GetAxisValue(moveAction.action.ReadValue<Vector2>(), movementAxis) * inputForce; // * currentFallInputStrength;
         float currentAxisVelocity = GetAxisValue(currentVelocity, movementAxis);
         float currentMaxAirSpeed = _useGravityMomentum ? maxGravityAirSpeed : maxAirSpeed;
 
@@ -355,6 +380,8 @@ public class PlayerController : MonoBehaviour
         wasGrounded = isGrounded;
         isGrounded = groundedObjects.Count > 0;
         justLanded = !wasGrounded && isGrounded; //true when going from air to ground
+        //Reset input degradation once on ground
+        //degradeInput = !isGrounded && degradeInput;
         //isJumping = isGrounded ? false : isJumping; //Ensure false while grounded
     }
 
@@ -384,6 +411,47 @@ public class PlayerController : MonoBehaviour
             //maxLandingMomentum = Vector3.zero;
         }
     }
+
+    //Start a countdown once player walks off an edge
+    private void CalculateEdgeTimer()
+    {
+        //Check if player just walked off edge
+        justLeftEdge = (!isGrounded && wasGrounded && !isJumping && !_useGravityMomentum);
+        //Reduce edge timer over time once activated
+        if (justLeftEdge || currentEdgeTimer < edgeTimer)
+        {
+            useEdgeBuffer = true;
+            currentEdgeTimer -= Time.deltaTime;
+        }
+        if (currentEdgeTimer <= 0)
+        {
+            currentEdgeTimer = edgeTimer;
+            useEdgeBuffer = false;
+        }
+    }
+
+    //Part of fall input degredation feature not being used for now
+    /*
+    private void CalculateFallTimer()
+    {
+        if (!degradeInput)
+        {
+            if (currentFallInputStrength != maxFallInputStrength)
+            {
+                currentFallInputStrength = maxFallInputStrength;
+            }
+            currentFallTimer -= Time.deltaTime;
+            if (currentFallTimer <= 0)
+            {
+                degradeInput = true;
+                currentFallTimer = fallInputTimer;
+            }
+        }
+        else
+        {
+            currentFallInputStrength = Mathf.Lerp(currentFallInputStrength, 0, inputDegradeSpeed);
+        }
+    }*/
 
     //Return the x or y value of a vector, depending on which axis is being used
     private float GetAxisValue(Vector3 v, Axis axis)
