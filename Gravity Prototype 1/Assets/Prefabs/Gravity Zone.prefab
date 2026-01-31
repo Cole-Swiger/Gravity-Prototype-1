@@ -136,7 +136,7 @@ Transform:
   m_GameObject: {fileID: 3802096360338211086}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.77618, y: 1.36987, z: 0.45}
+  m_LocalPosition: {x: 0, y: 0, z: 0.45}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -215,7 +215,7 @@ MonoBehaviour:
   rightGravity: {x: 0, y: 0, z: 0}
   downGravity: {x: 0, y: 0, z: 0}
   leftGravity: {x: 0, y: 0, z: 0}
-  mode: 0
+  actionManager: {fileID: 0}
   assignedMaterial: {fileID: 2100000, guid: 55c66c4b46987a0498a8ea778010f3d1, type: 2}
   materialDown: {fileID: 2100000, guid: 4e19d4905dbe68a41a8d0802e7f46d9e, type: 2}
   materialRight: {fileID: 2100000, guid: cf43f6c8ec3150a49a1fedb623532f0f, type: 2}

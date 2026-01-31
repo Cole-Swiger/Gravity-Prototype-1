@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.Windows;
 
 public class PlayerController : MonoBehaviour
@@ -312,12 +313,25 @@ public class PlayerController : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         Debug.Log("Trigger Enter");
+        //Switch
         if (other.gameObject.CompareTag("Switch"))
         {
             Debug.Log("Collided with Switch");
             GravitySwitchController gsc = other.gameObject.GetComponent<GravitySwitchController>();
             gsc.PressButton();
             gsc.SwitchGravityForZones();
+        }
+        //Item
+        if (other.gameObject.CompareTag("Item"))
+        {
+            Debug.Log("Item collected");
+            Destroy(other.gameObject);
+        }
+        //Level Triggers
+        if (other.gameObject.CompareTag("Death Plane") || other.gameObject.CompareTag("Finish"))
+        {
+            //Reset level
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
     }
     private void OnTriggerExit(Collider other)
