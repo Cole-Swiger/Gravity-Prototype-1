@@ -17,7 +17,7 @@ public class ActionManagerController : MonoBehaviour
     public UnityEvent cameraModeUpdateEvent;
 
     //Text
-    [SerializeField] TMP_Text modeText;
+    [SerializeField] private TMP_Text modeText;
 
     private void Awake()
     {
@@ -58,17 +58,26 @@ public class ActionManagerController : MonoBehaviour
             //b for both
             case "b":
                 mode = GameMode.Both;
-                modeText.text = "Both";
+                if (modeText != null)
+                {
+                    modeText.text = "Both";
+                }
                 break;
             //n for no switches, so free
             case "n":
                 mode = GameMode.Free;
-                modeText.text = "Manual";
+                if (modeText != null)
+                {
+                    modeText.text = "Manual";
+                }
                 break;
             //m for more switches, so switch
             case "m":
                 mode = GameMode.Switch;
-                modeText.text = "Switch";
+                if (modeText != null)
+                {
+                    modeText.text = "Switch";
+                }
                 break;
         }
         Debug.Log("Current Game Mode: " + mode);
