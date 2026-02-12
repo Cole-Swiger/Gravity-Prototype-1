@@ -8,6 +8,7 @@ public class ActionManagerController : MonoBehaviour
     //Mode
     private InputAction modeAction;
     private InputAction cameraModeAction;
+    private InputAction pauseAction;
     public enum GameMode { Free, Switch, Both };
     public GameMode mode;
 
@@ -16,24 +17,31 @@ public class ActionManagerController : MonoBehaviour
     public UnityEvent modeUpdateEvent;
     public UnityEvent cameraModeUpdateEvent;
 
-    //Text
+    //Menus and Text
     [SerializeField] private TMP_Text modeText;
+    [SerializeField] private GameObject pauseMenu;
+
+    //State
+    public bool isPaused = false;
 
     private void Awake()
     {
         modeAction = InputSystem.actions.FindAction("Mode Switch");
         cameraModeAction = InputSystem.actions.FindAction("Camera Mode Switch");
+        pauseAction = InputSystem.actions.FindAction("Pause");
     }
 
     private void OnEnable()
     {
         modeAction.performed += OnModeActionPerformed;
         cameraModeAction.performed += OnCameraModeActionPerformed;
+        pauseAction.performed += OnPauseActionPerformed;
     }
     private void OnDisable()
     {
         modeAction.performed -= OnModeActionPerformed;
         cameraModeAction.performed -= OnCameraModeActionPerformed;
+        pauseAction.performed -= OnPauseActionPerformed;
     }
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -89,5 +97,14 @@ public class ActionManagerController : MonoBehaviour
     private void OnCameraModeActionPerformed(InputAction.CallbackContext context)
     {
         cameraModeUpdateEvent.Invoke();
+    }
+
+    //Pause and Unpause Scene
+    //Show and hide pause menu
+    public void OnPauseActionPerformed(InputAction.CallbackContext context)
+    {
+        isPaused = !isPaused;
+        Time.timeScale = isPaused ? 0 : 1;
+        pauseMenu.SetActive(isPaused);
     }
 }
